@@ -25,7 +25,7 @@ async function access(request,env,requestId){
 }
 async function audit(env,actor,action,resource){await env.DB.prepare('INSERT INTO audit VALUES(?,?,?,?,?,?)').bind(id(),actor.id,actor.email,action,resource||null,Date.now()).run();}
 async function chat(request,env,actor){
- if(env.CHAT_ENABLED!=='true'||!env.ROUTER_URL||!env.ROUTER_KEY||!actor.ai_consent_at)return deny(503,'Chat is not enabled for this client. Privacy approval and verified free-only backend required.');
+ if(env.CHAT_ENABLED!=='true'||env.ROUTER_CONTRACT_VERIFIED!=='true'||!env.ROUTER_URL||!env.ROUTER_KEY||!actor.ai_consent_at)return deny(503,'Chat is not enabled for this client. Privacy approval and verified free-only backend required.');
  const size=Number(request.headers.get('Content-Length')||0);if(size>20000)return deny(413,'Message too large');
  let body;try{body=await request.json();}catch{return deny(400,'Invalid message');}
  if(Object.keys(body).some(k=>k!=='message'))return deny(400,'Text-only chat does not accept images or attachments');
