@@ -3,6 +3,13 @@ const denied=(status,text)=>new Response(JSON.stringify({error:text}),{status,he
 export default {async fetch(request,env){try{
  if(!env.DB)return denied(503,'Private store unavailable.');const auth=accessAuth(env),url=new URL(request.url);
  if(url.pathname==='/api/session'&&request.method==='GET'){const identity=await auth.verify(request);if(!identity)return denied(401,'Sign in required.');const rows=(await env.DB.prepare('SELECT r.id,r.title FROM requests r JOIN memberships m ON m.client_id=r.client_id WHERE NOT EXISTS(SELECT 1 FROM request_retention t WHERE t.request_id=r.id AND t.purge_after IS NOT NULL AND t.purge_after<=CAST(unixepoch() AS INTEGER)*1000) AND m.email=?').bind(identity.subject).all()).results;return new Response(JSON.stringify({requests:rows,enabled:env.CHAT_ENABLED==='true'&&env.MODEL_PRIVACY_VERIFIED==='true'&&env.MODEL_QUOTA_VERIFIED==='true'}),{headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});}
+ if(url.pathname.startsWith('/website-review/')){
+ const identity=await auth.verify(request);if(!identity)return denied(401,'Sign in required.');if(request.method!=='GET')return denied(405,'Review is read-only.');
+ let path=url.pathname;if(path.endsWith('/'))path+='index.html';
+ const rows=(await env.DB.prepare('SELECT a.mime,a.body FROM review_assets a JOIN requests r ON r.id=a.request_id JOIN memberships m ON m.client_id=r.client_id WHERE a.path=? AND m.email=? AND NOT EXISTS(SELECT 1 FROM request_retention t WHERE t.request_id=r.id AND t.purge_after IS NOT NULL AND t.purge_after<=CAST(unixepoch() AS INTEGER)*1000) ORDER BY a.part').bind(path,identity.subject).all()).results;
+ if(!rows.length)return denied(404,'Review page not found.');const raw=atob(rows.map(x=>x.body).join(''));const bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));
+ return new Response(bytes,{headers:{'Content-Type':rows[0].mime,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'self'; form-action 'none'; base-uri 'self'"}});
+ }
  if(url.pathname==='/data.js'&&request.method==='GET'){
  const identity=await auth.verify(request);if(!identity)return denied(401,'Sign in required.');
  const rows=(await env.DB.prepare('SELECT r.id,r.title FROM requests r JOIN memberships m ON m.client_id=r.client_id WHERE NOT EXISTS(SELECT 1 FROM request_retention t WHERE t.request_id=r.id AND t.purge_after IS NOT NULL AND t.purge_after<=CAST(unixepoch() AS INTEGER)*1000) AND m.email=?').bind(identity.subject).all()).results;
