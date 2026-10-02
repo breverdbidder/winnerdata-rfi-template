@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {spawnSync} from 'node:child_process';
+test('dependency-free Pages bundle builds and fails closed',async()=>{const p=spawnSync(process.execPath,['build-pages.mjs'],{encoding:'utf8'});assert.equal(p.status,0,p.stderr);const worker=(await import('./dist/_worker.js')).default;assert.equal((await worker.fetch(new Request('https://sample.test/'),{})).status,503);assert.equal((await worker.fetch(new Request('https://sample.test/api/session'),{DB:{}})).status,401);});
