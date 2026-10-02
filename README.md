@@ -4,13 +4,15 @@ Portable, MIT-licensed codebase for website project review, conversational intak
 
 ## Run
 
-Node 22+, no third-party packages. `npm test` runs 26 deterministic tests. `node demo-server.mjs` serves the sample at http://127.0.0.1:8080. Chat is disabled unless `SYNTHETIC_DEMO=1` is set. That mode is explicitly a local test double, not AI and not a live client service. No external model call is made by tests or demo.
+Node 22+, no third-party packages. `npm test` runs 32 deterministic tests. `node demo-server.mjs` serves the sample at http://127.0.0.1:8080. Chat is disabled unless `SYNTHETIC_DEMO=1` is set. That mode is explicitly a local test double, not AI and not a live client service. No external model call is made by tests or demo.
 
 ## Source
 
 - `service.mjs`: vendor-free application service; auth, store and model are injected.
 - `d1-store.mjs`, `access-auth.mjs`, `portable-worker.mjs`: production-target storage/auth/runtime adapters; source implemented, live bindings not provisioned or tested.
 - `private-openrouter.mjs`: optional direct free model adapter enforcing no-training/ZDR provider filters and no fallback; must pass live privacy/quota/availability gates before enable.
+- `whatsapp-inbound.mjs`: optional signature-verified inbound adapter, no outbound send/model call; account not connected.
+- `runtime.test.mjs`, `channel.test.mjs`, `schema.test.mjs`: signed runtime/tenant/SQLite and channel authentication tests, not live client onboarding.
 - `CHANNELS.md`: channel integration contract, not a live WhatsApp connection.
 - `memory-store.mjs`: synthetic development store, not durable production storage.
 - `free-router.mjs`: optional free-only model adapter, contract/privacy gated. No paid fallback, tools, images or files.
@@ -20,7 +22,7 @@ Node 22+, no third-party packages. `npm test` runs 26 deterministic tests. `node
 
 ## Actual status
 
-The codebase has real HTTP chat/history/requirements flow with server-derived membership, separate tenant transcripts, same-origin writes, byte/output limits, daily quotas and consent gating. Tests use synthetic identities and model replies. Twenty-six local tests pass. This does NOT establish live client authentication, AI or document storage readiness.
+The codebase has real HTTP chat/history/requirements flow with server-derived membership, separate tenant transcripts, same-origin writes, byte/output limits, daily quotas and consent gating. Tests use synthetic identities and model replies. Thirty-two local tests pass. This does NOT establish live client authentication, AI or document storage readiness.
 
 Remaining: production auth/store adapters, live model response contract, actual provider privacy/retention and free quota, intended user login, deployment alias access tests, structured confirmed change proposals, malware review/retention/deletion pipeline and reviewer workflow. Upload and external AI remain OFF. Regex secret checks are a backstop, not a guarantee against sensitive disclosures.
 
