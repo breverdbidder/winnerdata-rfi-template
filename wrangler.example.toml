@@ -1,0 +1,12 @@
+name = "winnerdata-rfi-client"
+main = "cloudflare-worker.mjs"
+compatibility_date = "2026-10-01"
+# Fill deployment bindings and identity config privately, never client records or secrets.
+# No deployment is authorized by this example.
+[vars]
+CHAT_ENABLED = "false"
+UPLOAD_ENABLED = "false"
+DAILY_MESSAGE_CAP = "10"
+# ACCESS_ISSUER, ACCESS_AUD, PUBLIC_ORIGIN are required private deployment configuration.
+# ROUTER_KEY is a server secret. ROUTER_URL must be verified free-only before enabling.
+# DB: dedicated D1 binding. DOCS: private R2 binding. ASSETS: static UI binding.
