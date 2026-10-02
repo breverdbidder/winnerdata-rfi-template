@@ -2,6 +2,7 @@ import {createService} from './service.mjs';import {d1Store} from './d1-store.mj
 const denied=(status,text)=>new Response(JSON.stringify({error:text}),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 export default {async fetch(request,env){try{
  if(!env.DB)return denied(503,'Private store unavailable.');const auth=accessAuth(env),url=new URL(request.url);
+ if(url.pathname==='/api/session'&&request.method==='GET'){const identity=await auth.verify(request);if(!identity)return denied(401,'Sign in required.');const rows=(await env.DB.prepare('SELECT r.id,r.title FROM requests r JOIN memberships m ON m.client_id=r.client_id WHERE m.email=?').bind(identity.subject).all()).results;return new Response(JSON.stringify({requests:rows,enabled:env.CHAT_ENABLED==='true'&&env.MODEL_PRIVACY_VERIFIED==='true'&&env.MODEL_QUOTA_VERIFIED==='true'}),{headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});}
  if(url.pathname.startsWith('/api/')){
  // Direct privacy-enforcing adapter. Existing shared router ignores these privacy fields.
  const enabled=env.CHAT_ENABLED==='true'&&env.MODEL_PRIVACY_VERIFIED==='true'&&env.MODEL_QUOTA_VERIFIED==='true';
