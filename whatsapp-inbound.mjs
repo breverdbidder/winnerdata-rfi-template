@@ -1,0 +1,12 @@
+// Optional inbound adapter. No outbound send or model call. Owner account enrollment required.
+export function whatsappInbound({appSecret,verifyToken,businessNumberId,store,maxBytes=100000}){
+ return {async handle(request){try{const url=new URL(request.url);if(request.method==='GET'){if(url.searchParams.get('hub.mode')!=='subscribe'||url.searchParams.get('hub.verify_token')!==verifyToken)return new Response('Denied',{status:403});return new Response(url.searchParams.get('hub.challenge')||'');}
+ if(request.method!=='POST')return new Response('Method not allowed',{status:405});if(!appSecret||!businessNumberId)return new Response('Not configured',{status:503});
+ const reader=request.body?.getReader();if(!reader)return new Response('Body required',{status:400});let chunks=[],size=0;while(true){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>maxBytes){await reader.cancel();return new Response('Too large',{status:413});}chunks.push(value);}const bytes=new Uint8Array(size);let o=0;for(const x of chunks){bytes.set(x,o);o+=x.length;}
+ const signature=request.headers.get('X-Hub-Signature-256')||'';if(!/^sha256=[0-9a-f]{64}$/.test(signature))return new Response('Denied',{status:403});const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(appSecret),{name:'HMAC',hash:'SHA-256'},false,['verify']);const sig=Uint8Array.from(signature.slice(7).match(/../g),x=>parseInt(x,16));if(!await crypto.subtle.verify('HMAC',key,sig,bytes))return new Response('Denied',{status:403});
+ const payload=JSON.parse(new TextDecoder().decode(bytes));if(payload.object!=='whatsapp_business_account')return new Response('Unsupported event',{status:400});
+ for(const entry of payload.entry||[])for(const change of entry.changes||[]){const v=change.value;if(v?.metadata?.phone_number_id!==businessNumberId)continue;for(const m of v.messages||[]){if(m.type!=='text'||!m.text?.body||!m.id||!m.from)continue;const actor=await store.resolveChannelMembership({businessAccountId:entry.id,businessNumberId,senderId:m.from});if(!actor)continue;
+ // Must be atomic dedup + append. Destination and verified sender determine tenant, never message text.
+ await store.appendInboundOnce(actor,{channel:'WhatsApp',providerMessageId:m.id,businessAccountId:entry.id,businessNumberId,senderId:m.from,text:m.text.body.slice(0,4000),receivedAt:Number(m.timestamp)*1000});}}
+ return new Response('Accepted',{status:200});}catch{return new Response('Unavailable',{status:503});}}};
+}

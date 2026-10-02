@@ -1,0 +1,6 @@
+dist/
+.env*
+wrangler.toml
+private/
+node_modules/
+*.log

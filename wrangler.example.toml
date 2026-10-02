@@ -1,0 +1,18 @@
+name = "winnerdata-rfi-client"
+main = "portable-worker.mjs"
+compatibility_date = "2026-10-01"
+# Fill deployment bindings and identity config privately, never client records or secrets.
+# No deployment is authorized by this example.
+[vars]
+CHAT_ENABLED = "false"
+UPLOAD_ENABLED = "false"
+MODEL_PRIVACY_VERIFIED = "false"
+MODEL_QUOTA_VERIFIED = "false"
+DAILY_MESSAGE_CAP = "10"
+# ACCESS_ISSUER, ACCESS_AUD, PUBLIC_ORIGIN are required private deployment configuration.
+# ROUTER_KEY is a server secret. ROUTER_URL must be verified free-only before enabling.
+# DB: dedicated D1 binding. DOCS: private R2 binding. ASSETS: static UI binding.
+
+# OPENROUTER_API_KEY is a server secret. FREE_MODEL must end :free.
+# MODEL_PROVIDER must have verified non-training/ZDR terms and currently eligible endpoint.
+# The portable model adapter uses privacy filtering and NO provider fallback.
