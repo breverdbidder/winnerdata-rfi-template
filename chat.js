@@ -1,7 +1,9 @@
 // Configuration must be generated server-side after verified membership. Public demo stays disconnected.
 (async()=>{
 const state=document.getElementById('chat-state'),form=document.getElementById('chat-form'),input=document.getElementById('message'),send=document.getElementById('send'),log=document.getElementById('conversation');
-const config=window.RFI_CHAT;if(!config||!config.requestId||!config.enabled){return;}
+let config=window.RFI_CHAT;
+if(!config){try{const r=await fetch('/api/session',{credentials:'same-origin',headers:{Accept:'application/json'}});if(!r.ok)return;const session=await r.json();if(session.requests?.length!==1){state.textContent='Select a client request in your authenticated workspace before chatting.';return;}config={requestId:session.requests[0].id,enabled:session.enabled};}catch{return;}}
+if(!config?.requestId||!config.enabled){state.textContent='Private chat is not enabled. Provider and access checks are still pending.';return;}
 const base='/api/requests/'+encodeURIComponent(config.requestId);
 function message(role,body){let p=document.createElement('p');p.style.whiteSpace='pre-wrap';p.textContent=(role==='user'?'You: ':'Assistant: ')+body;log.append(p);}
 try{const response=await fetch(base+'/history',{credentials:'same-origin',headers:{Accept:'application/json'}});if(!response.ok)throw Error('Authenticated chat is unavailable. Sign in with your authorized client account.');const data=await response.json();for(const item of data.messages||[])message(item.role,item.body);input.disabled=false;send.disabled=false;input.placeholder='Ask about this project or request a change';state.textContent='Private text-only chat. Messages are saved to this request; proposed changes are not approvals.';}catch(e){state.textContent=e.message;return;}
