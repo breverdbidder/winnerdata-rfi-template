@@ -10,3 +10,5 @@ CREATE TABLE IF NOT EXISTS audit(id TEXT PRIMARY KEY,request_id TEXT NOT NULL,em
 CREATE TABLE IF NOT EXISTS quota(client_id TEXT NOT NULL,email TEXT NOT NULL,day TEXT NOT NULL,count INTEGER NOT NULL,PRIMARY KEY(client_id,email,day));
 
 CREATE TABLE IF NOT EXISTS request_retention(request_id TEXT PRIMARY KEY REFERENCES requests(id) ON DELETE CASCADE,closed_at INTEGER,purge_after INTEGER,CHECK((closed_at IS NULL AND purge_after IS NULL) OR (closed_at IS NOT NULL AND purge_after=closed_at+2592000000)));
+
+CREATE TABLE IF NOT EXISTS review_assets(request_id TEXT NOT NULL REFERENCES requests(id) ON DELETE CASCADE,path TEXT NOT NULL,part INTEGER NOT NULL,mime TEXT NOT NULL,body TEXT NOT NULL,PRIMARY KEY(request_id,path,part));
