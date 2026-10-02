@@ -1,5 +1,6 @@
 // Supabase router is an optional implementation, not the application API.
 // Client deployment stays disabled until the live response contract and privacy are verified.
+export function decodeFreeRouter(result){if(result?.tier!=='T_free_openrouter'||result.provider!=='openrouter'||!String(result.model||'').endsWith(':free')||Number(result.cost_usd)!==0||typeof result.text!=='string')throw Error('Unexpected free router response');return result.text;}
 export function freeRouter({url,key,decodeResponse,fetchImpl=fetch,contractVerified=false}){
  if(!contractVerified||typeof decodeResponse!=='function')throw Error('Live router response contract must be verified first.');
  return {async reply({message,history=[],maxOutputTokens=600,signal}){
