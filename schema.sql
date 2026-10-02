@@ -8,3 +8,5 @@ CREATE TABLE IF NOT EXISTS proposals(id TEXT PRIMARY KEY,request_id TEXT NOT NUL
 CREATE TABLE IF NOT EXISTS documents(id TEXT PRIMARY KEY,request_id TEXT NOT NULL REFERENCES requests(id),uploader TEXT NOT NULL,object_key TEXT NOT NULL UNIQUE,mime TEXT NOT NULL,size INTEGER NOT NULL,status TEXT NOT NULL CHECK(status IN('quarantine','approved','rejected')),created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS audit(id TEXT PRIMARY KEY,request_id TEXT NOT NULL,email TEXT NOT NULL,action TEXT NOT NULL,resource_id TEXT,created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS quota(client_id TEXT NOT NULL,email TEXT NOT NULL,day TEXT NOT NULL,count INTEGER NOT NULL,PRIMARY KEY(client_id,email,day));
+
+CREATE TABLE IF NOT EXISTS request_retention(request_id TEXT PRIMARY KEY REFERENCES requests(id) ON DELETE CASCADE,closed_at INTEGER,purge_after INTEGER,CHECK((closed_at IS NULL AND purge_after IS NULL) OR (closed_at IS NOT NULL AND purge_after=closed_at+2592000000)));
