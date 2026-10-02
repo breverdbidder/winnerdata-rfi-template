@@ -8,15 +8,16 @@ export function validateMessage(value){
 export function createService({auth,store,model,origin,chatEnabled=false,clock=()=>Date.now(),dailyCap=10}){
  async function scope(request,requestId){const user=await auth.verify(request);if(!user?.subject)throw new ServiceError(401,'Sign in required.');const membership=await store.resolveMembership(user.subject,requestId);if(!membership)throw new ServiceError(403,'Access denied.');return {...membership,subject:user.subject,requestId};}
  return {async handle(request){try{
- const path=new URL(request.url).pathname.match(/^\/api\/requests\/([a-zA-Z0-9_-]{1,80})\/(history|chat|requirements)$/);if(!path)throw new ServiceError(404,'Not found.');const actor=await scope(request,path[1]);
+ const path=new URL(request.url).pathname.match(/^\/api\/requests\/([a-zA-Z0-9_-]{1,80})\/(history|chat|notes|requirements)$/);if(!path)throw new ServiceError(404,'Not found.');const actor=await scope(request,path[1]);
  if(request.method==='GET'&&path[2]==='history')return respond({messages:await store.history(actor)});
  if(request.method==='GET'&&path[2]==='requirements')return respond({requirements:await store.requirements(actor)});
- if(request.method!=='POST'||path[2]!=='chat')throw new ServiceError(405,'Method not allowed.');
+ if(request.method!=='POST'||!['chat','notes'].includes(path[2]))throw new ServiceError(405,'Method not allowed.');
  if(!origin||request.headers.get('Origin')!==origin)throw new ServiceError(403,'Origin denied.');
- if(!chatEnabled||!actor.aiConsentAt||!model)throw new ServiceError(503,'Chat not enabled for this client.');
+ if(path[2]==='chat'&&(!chatEnabled||!actor.aiConsentAt||!model))throw new ServiceError(503,'Chat not enabled for this client.');
  // Bound actual bytes even without Content-Length. Never read unbounded request.json().
  const reader=request.body?.getReader();if(!reader)throw new ServiceError(400,'Message required.');let chunks=[],length=0;while(true){const {value,done}=await reader.read();if(done)break;length+=value.length;if(length>20000){await reader.cancel();throw new ServiceError(413,'Message too large.');}chunks.push(value);}const bytes=new Uint8Array(length);let offset=0;for(const c of chunks){bytes.set(c,offset);offset+=c.length;}let value;try{value=JSON.parse(new TextDecoder().decode(bytes));}catch{throw new ServiceError(400,'Invalid JSON.');}const message=validateMessage(value);
  const now=clock();if(!await store.reserveQuota(actor,new Date(now).toISOString().slice(0,10),Math.min(25,Math.max(1,dailyCap))))throw new ServiceError(429,'Daily limit reached. No paid fallback.');
+ if(path[2]==='notes'){await store.appendNote(actor,{message,createdAt:now});return respond({saved:true,body:message,review_state:'pending',ai:false});}
  const history=await store.history(actor);const answer=await model.reply({message,history:history.slice(-12).map(({role,body})=>({role,body})),maxOutputTokens:600,signal:AbortSignal.timeout(30000)});
  if(typeof answer!=='string'||!answer.trim()||answer.length>8000)throw new ServiceError(503,'Assistant response unavailable.');
  // Atomic pair + audit. A failed save is not reported as successful chat.
