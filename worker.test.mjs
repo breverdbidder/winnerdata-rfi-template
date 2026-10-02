@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import worker,{verifyAccess,classifySensitive,magicMatches} from './cloudflare-worker.mjs';
+test('no configured backend fails closed',async()=>{let r=await worker.fetch(new Request('https://example.test/'),{});assert.equal(r.status,503)});
+test('unauthenticated HTML denied',async()=>{let r=await worker.fetch(new Request('https://example.test/'),{DB:{}});assert.equal(r.status,401)});
+test('unauthenticated request data denied',async()=>{let r=await worker.fetch(new Request('https://example.test/api/requests/tenant-a/history'),{DB:{}});assert.equal(r.status,403)});
+test('forged token cannot authenticate',async()=>{await assert.rejects(()=>verifyAccess('e30.e30.bad',{ACCESS_ISSUER:'https://example.cloudflareaccess.com',ACCESS_AUD:'test'}))});
+test('sensitive values are rejected',()=>{assert.equal(classifySensitive('password: example-not-a-secret'),true);assert.equal(classifySensitive('We prefer larger buttons'),false);assert.equal(classifySensitive('123-45-6789'),true)});
+test('MIME magic validated',()=>{assert.equal(magicMatches(new TextEncoder().encode('%PDF-1.7'),'application/pdf'),true);assert.equal(magicMatches(new TextEncoder().encode('html'),'application/pdf'),false);assert.equal(magicMatches(new Uint8Array([137,80,78,71,13,10,26,10]),'image/png'),true)});
+test('all aliases require signed identity, not spoofed email',async()=>{const r=await worker.fetch(new Request('https://alias.example.test/api/requests/client-b/requirements',{headers:{'Cf-Access-Authenticated-User-Email':'admin@example.test'}}),{DB:{}});assert.equal(r.status,403)});
+test('malformed body does not bypass auth',async()=>{const r=await worker.fetch(new Request('https://example.test/api/requests/a/chat',{method:'POST',body:'{"images":["x"]}',headers:{Origin:'https://example.test'}}),{DB:{},CHAT_ENABLED:'true'});assert.equal(r.status,403)});
